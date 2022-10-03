@@ -1,0 +1,85 @@
+/* Simple +/-/* expression language; parser evaluates constant expressions on the fly*/
+/**
+ *  Package and Import Specifications
+ */
+import java_cup.runtime.*;
+
+/**
+ *  Usercode Components
+ */
+parser code {:
+    // Connect this parser to a scanner!
+    Scanner s;
+    Parser(Scanner s){ this.s=s; }
+:}
+
+/* define how to connect to the scanner! */
+scan with {: return s.next_token(); :};
+
+/**
+ *  Symbol Lists
+ */
+
+/* Terminals (tokens returned by the scanner). */
+terminal        PLUS, MINUS, TIMES, COMMA, LPAREN, RPAREN, IF, ELSE, PREFIX, REVERSE;
+terminal String    STRING_LITERAL, IDENTIFIER;
+
+non terminal expr_list, Defs, Arguments, more_args;
+non terminal calls, expression, if_statment, condition;
+non terminal concat, string;
+
+/**
+ *  Precedence Declarations
+ */
+
+precedence left IF, ELSE;
+precedence left REVERSE, PREFIX;
+precedence left PLUS;
+
+/**
+ *  The Grammar Rules
+ */
+
+expr_list ::= Defs:df calls:cl {: System.out.println("public class Main {\npublic static void main(String[] args) {\n\t" + Defs +"\n\t}\n" + cl + "\n}"); :}
+;
+
+//0 or more function definitions (prototypes)
+Defs      ::= Defs:df IDENTIFIER:id LPAREN Arguments:args{: RESULT = "public static String " + id + "(" + args + ")""\n\t" + df; :}
+             | {: RESULT = ""; :}
+;
+
+//0 or more arguments in function definitions
+Arguments  ::= string:str more_args:more {: RESULT = "String " + str + more; :}
+             | {: RESULT = ""; :}
+;
+
+more_args   ::= COMMA string:str more_args:more {: RESULT = ", String " + str + more; :}
+             | {: RESULT = ""; :}
+;
+
+//0 or more calls inside functions
+calls       ::= expression:exp calls:cl {: RESULT = "System.out.println(" + exp + ");\n" + cl; :}
+             | {: RESULT = ""; :}
+;
+
+//needs to be completed (expression can be concatenation, result of if statement or result of function call)
+expression  ::= IDENTIFIER:id {: RESULT = id :}
+;
+
+//if statement
+if_statment ::= IF LPAREN condition:cond RPAREN string:str1 ELSE string:str2 {: RESULT = "(" + cond + str1 + ") ? (" + str1 + ") : (" + str2 + "))"; :}
+;
+
+//condition of an if statement
+condition   ::= PREFIX string:str {: RESULT = "(" + str + ")" + ".startsWith("; :}
+             | REVERSE PREFIX string:str {: RESULT = "(" + str + ")" + ".endsWith("; :}
+;
+
+//concatenation of two strings
+concat ::= string:str1 PLUS string:str2 {: RESULT = str1 + "+" + str2; :}
+;
+
+//string
+string      ::= IDENTIFIER:id {: RESULT = id; :}
+             ;
+
